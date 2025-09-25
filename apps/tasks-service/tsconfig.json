@@ -1,0 +1,9 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "outDir": "./dist",
+    "baseUrl": "./"
+  },
+  "include": ["src/**/*", "../../portamigrations/1758170216104-InitialTaskSchema.ts"],
+  "exclude": ["node_modules", "dist"]
+}

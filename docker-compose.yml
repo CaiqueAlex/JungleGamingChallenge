@@ -1,0 +1,104 @@
+services:
+  api-gateway:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: api-gateway
+    ports:
+      - "${GATEWAY_PORT}:${GATEWAY_PORT}"
+    volumes:
+      - .:/app
+      - /app/node_modules
+    command: sh -c "cd /app && pnpm --filter @challenge/api-gateway run dev"
+    env_file: .env
+    depends_on:
+      rabbitmq: { condition: service_healthy }
+    networks: [challenge-network]
+
+  auth-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: auth-service
+    volumes:
+      - .:/app
+      - /app/node_modules
+    command: sh -c "cd /app && pnpm --filter @challenge/auth-service run dev"
+    env_file: .env
+    depends_on:
+      db: { condition: service_healthy }
+      rabbitmq: { condition: service_healthy }
+    networks: [challenge-network]
+
+  tasks-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: tasks-service
+    volumes:
+      - .:/app
+      - /app/node_modules
+    command: sh -c "cd /app && pnpm --filter @challenge/tasks-service run dev"
+    env_file: .env
+    depends_on:
+      db: { condition: service_healthy }
+      rabbitmq: { condition: service_healthy }
+    networks: [challenge-network]
+
+  notifications-service: 
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: notifications-service
+    ports:
+      - "${NOTIFICATIONS_PORT:-3004}:3004"
+    volumes:
+      - .:/app
+      - /app/node_modules
+    command: sh -c "cd /app && pnpm --filter @challenge/notifications-service run dev"
+    env_file: .env
+    depends_on:
+      db: { condition: service_healthy }
+      rabbitmq: { condition: service_healthy }
+    networks: [challenge-network]
+
+  db: 
+    image: postgres:16-alpine
+    container_name: db
+    ports: ["5432:5432"]
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes: [postgres_data:/var/lib/postgresql/data]
+    networks: [challenge-network]
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  rabbitmq: 
+    image: rabbitmq:3.13-management-alpine
+    container_name: rabbitmq
+    ports: ["5672:5672", "15672:15672"]
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_DEFAULT_USER}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_DEFAULT_PASS}
+    volumes: [rabbitmq_data:/var/lib/rabbitmq/]
+    networks: [challenge-network]
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "check_running", "-q"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+networks:
+  challenge-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  rabbitmq_data:
