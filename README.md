@@ -112,7 +112,7 @@ pnpm install
 Agora usa o Docker Compose pra subir tudo de uma vez:
 docker-compose up --build
 
-Depois vá na pasta apps/web/ e use npm run dev para iniciar a interface grafica
+Depois vá na pasta apps/web/ e use pnpm run dev para iniciar a interface grafica
 
 URLs pra acessar:
 
